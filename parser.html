@@ -1,0 +1,3081 @@
+<html>
+  <head>
+	<script src="jquery-1.5.2.js"></script>
+		<script>
+			
+			$(document).ready(function(){
+			
+				$("#code span").live("mouseover",function(){
+				//highlight a word when hovered 
+					var text = $(this).text();
+					$(this).css("background-color","yellow");
+					
+					var path = 0;
+					var space = 0;
+					do{
+						path++;
+						var sibling = "$(this)";
+						for(var i = 0; i < path; i++){
+							sibling += ".prev()";
+						}
+						if(eval( sibling + ".text() == \"\" ")) space++;
+						sibling += ".length";
+						var len;
+						eval("len = " + sibling);
+						
+					}while(len != 0);
+					
+					var position = path - space;
+					$("#result span").each(function(index){
+						if(index == position){
+							$(this).css("background-color", "yellow"); 
+							$("#result").scrollTop(position*(20-2));
+						} else if(index > position){
+							return false;
+						}
+					});
+					
+				});
+				$("#code span").live("mouseout",function(){
+					//highlight a word when hovered 
+					if($(this).css("background-color") !="rgb(0, 0, 255)"){
+						$(this).css("background-color","white");
+					}
+					
+					$("#result span").each(function(index){
+						if($(this).css("background-color") !="rgb(0, 0, 255)"){
+							$(this).css("background-color","white");
+						}
+					});
+					
+				});
+			
+			});
+		</script>
+		<script>
+			var keywords_array = new Array();
+				keywords_array["class"] = "k00";
+				keywords_array["extends"] = "k01";
+				keywords_array["public"] = "k02";
+				keywords_array["return"] = "k03";
+				keywords_array["int"] = "k04";
+				keywords_array["boolean"] = "k05";
+				keywords_array["double"] = "k06";
+				keywords_array["void"] = "k07";
+				keywords_array["if"] = "k08";
+				keywords_array["else"] = "k09";
+				keywords_array["while"] = "k10";
+				keywords_array["super"] = "k11";
+			
+			var brackets_array = new Array();
+				brackets_array["("] = "b00";
+				brackets_array[")"] = "b01";
+				brackets_array["{"] = "b02";
+				brackets_array["}"] = "b03";
+				brackets_array["["] = "b04";
+				brackets_array["]"] = "b05";
+			
+			var sep_arr = new Array();
+				sep_arr[";"] = "s00";
+				sep_arr[","] = "s01";
+			
+			var operations_array = new Array();
+				operations_array["+"] = "op00";
+				operations_array["-"] = "op01";
+				operations_array["*"] = "op02";
+				operations_array["/"] = "op03";
+				operations_array[">="] = "op04";
+				operations_array["<="] = "op05";
+				operations_array["=="] = "op06";
+				operations_array["="] = "op07";
+				operations_array[">"] = "op08";
+				operations_array["<"] = "op09";
+				operations_array["!="] = "op10";
+				operations_array["&&"] = "op11";
+				operations_array["%"] = "op12";
+				operations_array["||"] = "op13";
+
+            function lineNumber(number){
+                return (number < 10) ? "0" + number + ". " : number + ". ";
+            }
+			
+			function getTypeById( id ) {
+				for(var key in type){
+					if( type[key] == id ) {
+						return key;
+					}
+				}
+			}
+			
+            var type = {
+                "DEFAULT":0,
+                "PROGRAM":1,
+                "CLASS_CODE":2,
+                "CLASS_DEFINITION":3,
+                "EXTENDS_CLASS":4,
+                "BASE_CLASS":5,
+                "CODE":6,
+                "DEC_CODE":7,
+                "SIGN":8,
+                "CHOISE":9,
+                "STMT":10,
+                "SIMPLE_STMT":11,
+                "ELSE_STMT":12,
+                "INNER_STMT":13,
+                "EXPR":14,
+                "EXPRS":15,
+                "SIMPLE_EXPR":16,
+                "LOGIC_OPERATION":17,
+                "OPERATION":18,
+                "FIELD_TYPE":19,
+                "CONSTRUCTOR":20,
+                "CONSTRUCTOR_CODE":21,
+                "DEC_PARAMETER":22,
+                "DEC_PARAMETERS":23,
+                "PARAMETER":24,
+                "PARAMETERS":25,
+                "FUNCTION_TAIL":26,
+                "CREATE_VAR":27,
+                "VAR":28,
+                "DEF_VAR":29,
+                "SIMPLE_CODE":30,
+                "ARGS":31,
+                "ARG":32,
+                "CALL_FUNCTION":33,
+                "FUNC":34,
+
+
+                "CLASS":40,
+                "EXTENDS":41,
+                "PUBLIC":42,
+                "VOID":43,
+                "ID":44,
+                "IF":45,
+                "ELSE":46,
+                "WHILE":47,
+                "RETURN":48,
+                "SUPER":49,
+                "VALUE":50,
+                "CURLY_OPEN":51,
+                "CURLY_CLOSE":52,
+                "OPEN":53,
+                "CLOSE":54,
+                "DEF":55,
+                "SEMICOLON":56,
+                "COMA":57,
+                "$":58,
+				
+				"EMPTY":59,
+				"ERROR":60
+            };
+
+            var table = [];
+            
+            table[ type.PROGRAM ]          = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+            table[ type.CLASS_CODE ]       = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.CLASS_DEFINITION ] = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.EXTENDS_CLASS ]    = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.BASE_CLASS ] 	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.CODE ]			   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.DEC_CODE ]		   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.SIGN ]			   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.CHOISE ]		   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.STMT ]			   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.SIMPLE_STMT ]	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.ELSE_STMT ]		   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.INNER_STMT ]	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.EXPR ]			   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.EXPRS ] 		   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.SIMPLE_EXPR ]	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.LOGIC_OPERATION ]  = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.OPERATION ] 	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.FIELD_TYPE ]	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.CONSTRUCTOR ] 	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.CONSTRUCTOR_CODE ] = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.DEC_PARAMETER ]    = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.DEC_PARAMETERS ]   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.PARAMETER ] 	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.PARAMETERS ]	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.FUNCTION_TAIL ]    = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.CREATE_VAR ]	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.VAR ] 			   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.DEF_VAR ]		   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.SIMPLE_CODE ]	   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.ARGS ]			   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.ARG ]              = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.CALL_FUNCTION ]    = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			table[ type.FUNC ]			   = [ type.CLASS, type.EXTENDS, type.PUBLIC, type.VOID, type.FIELD_TYPE, type.ID, type.IF, type.ELSE, type.WHILE, type.RETURN, type.SUPER, type.VALUE, type.CURLY_OPEN, type.CURLY_CLOSE, type.OPEN, type.CLOSE, type.OPERATION, type.LOGIC_OPERATION, type.DEF, type.SEMICOLON, type.COMA, type.$  ];
+			
+			
+			table[ type.PROGRAM ][ type.CLASS ] = [ type.CLASS_CODE, type.PROGRAM ];
+			table[ type.CLASS_CODE ][ type.CLASS ] = [ type.CLASS_DEFINITION, type.CURLY_OPEN, type.CODE, type.CURLY_CLOSE  ];
+			table[ type.CLASS_DEFINITION ][ type.CLASS ] = [ type.BASE_CLASS, type.EXTENDS_CLASS ];
+			table[ type.EXTENDS_CLASS ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.BASE_CLASS ][ type.CLASS ] = [ type.CLASS, type.ID ];
+			table[ type.CODE ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.DEC_CODE ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.SIGN ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.CHOISE ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.STMT ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.SIMPLE_STMT ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.ELSE_STMT ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.INNER_STMT ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.EXPR ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.EXPRS ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.SIMPLE_EXPR ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.LOGIC_OPERATION ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.OPERATION ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.FIELD_TYPE ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.CONSTRUCTOR ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.CONSTRUCTOR_CODE ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.DEC_PARAMETER ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.DEC_PARAMETERS ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.PARAMETER ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.PARAMETERS ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.FUNCTION_TAIL ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.CREATE_VAR ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.VAR ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.DEF_VAR ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.SIMPLE_CODE ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.ARGS ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.ARG ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.CALL_FUNCTION ][ type.CLASS ] = [ type.ERROR ];
+			table[ type.FUNC ][ type.CLASS ] = [ type.ERROR ];
+			
+			
+			table[ type.PROGRAM ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.CLASS_CODE ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.CLASS_DEFINITION ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.EXTENDS_CLASS ][ type.EXTENDS ] = [ type.EXTENDS, type.ID ];
+			table[ type.BASE_CLASS ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.CODE ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.DEC_CODE ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.SIGN ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.CHOISE ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.STMT ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.SIMPLE_STMT ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.ELSE_STMT ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.INNER_STMT ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.EXPR ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.EXPRS ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.SIMPLE_EXPR ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.LOGIC_OPERATION ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.OPERATION ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.FIELD_TYPE ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.CONSTRUCTOR ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.CONSTRUCTOR_CODE ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.DEC_PARAMETER ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.DEC_PARAMETERS ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.PARAMETER ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.PARAMETERS ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.FUNCTION_TAIL ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.CREATE_VAR ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.VAR ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.DEF_VAR ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.SIMPLE_CODE ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.ARGS ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.ARG ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.CALL_FUNCTION ][ type.EXTENDS ] = [ type.ERROR ];
+			table[ type.FUNC ][ type.EXTENDS ] = [ type.ERROR ];
+		
+		
+/* 02 */	table[ type.PROGRAM ][ type.PUBLIC ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.PUBLIC ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.PUBLIC ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.PUBLIC ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.PUBLIC ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.PUBLIC ] = [ type.PUBLIC, type.DEC_CODE, type.CODE ];
+/* 08 */	table[ type.DEC_CODE ][ type.PUBLIC ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.PUBLIC ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.PUBLIC ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.PUBLIC ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.PUBLIC ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.PUBLIC ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.PUBLIC ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.PUBLIC ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.PUBLIC ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.PUBLIC ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.PUBLIC ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.PUBLIC ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.PUBLIC ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.PUBLIC ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.PUBLIC ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.PUBLIC ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.PUBLIC ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.PUBLIC ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.PUBLIC ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.PUBLIC ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.PUBLIC ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.PUBLIC ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.PUBLIC ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.PUBLIC ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.PUBLIC ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.PUBLIC ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.PUBLIC ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.PUBLIC ] = [ type.ERROR ];
+			
+			
+/* 02 */	table[ type.PROGRAM ][ type.VOID ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.VOID ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.VOID ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.VOID ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.VOID ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.VOID ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.VOID ] = [ type.VOID, type.ID, type.FUNCTION_TAIL ];
+/* 09 */	table[ type.SIGN ][ type.VOID ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.VOID ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.VOID ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.VOID ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.VOID ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.VOID ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.VOID ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.VOID ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.VOID ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.VOID ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.VOID ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.VOID ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.VOID ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.VOID ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.VOID ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.VOID ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.VOID ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.VOID ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.VOID ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.VOID ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.VOID ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.VOID ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.VOID ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.VOID ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.VOID ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.VOID ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.VOID ] = [ type.ERROR ];
+
+			
+/* 02 */	table[ type.PROGRAM ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.FIELD_TYPE ] = [ type.SIGN, type.CHOISE ];
+/* 09 */	table[ type.SIGN ][ type.FIELD_TYPE ] = [ type.FIELD_TYPE, type.ID ];
+/* 10 */	table[ type.CHOISE ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.FIELD_TYPE ] = [ type.CREATE_VAR, type.STMT ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.FIELD_TYPE ] = [ type.STMT ];
+/* 15 */	table[ type.EXPR ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.FIELD_TYPE ] = [ type.FIELD_TYPE ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.FIELD_TYPE ] = [ type.STMT ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.FIELD_TYPE ] = [ type.FIELD_TYPE, type.ID ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.FIELD_TYPE ] = [ type.DEC_PARAMETER, type.DEC_PARAMETERS ];
+/* 25 */	table[ type.PARAMETER ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.FIELD_TYPE ] = [ type.FIELD_TYPE, type.ID, type.VAR ];
+/* 29 */	table[ type.VAR ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.FIELD_TYPE ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.FIELD_TYPE ] = [ type.ERROR ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.ID ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.ID ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.ID ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.ID ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.ID ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.ID ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.ID ] = [ type.CONSTRUCTOR ];
+/* 09 */	table[ type.SIGN ][ type.ID ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.ID ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.ID ] = [ type.DEF_VAR, type.STMT ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.ID ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.ID ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.ID ] = [ type.STMT ];
+/* 15 */	table[ type.EXPR ][ type.ID ] = [ type.SIMPLE_EXPR, type.LOGIC_OPERATION, type.SIMPLE_EXPR, type.EXPRS ];
+/* 16 */	table[ type.EXPRS ][ type.ID ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.ID ] = [ type.SIMPLE_CODE /*type.SIMPLE_CODE, type.LOGIC_OPERATION, type.SIMPLE_CODE*/ ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.ID ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.ID ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.ID ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.ID ] = [ type.ID, type.OPEN, type.DEC_PARAMETERS, type.CLOSE, type.CURLY_OPEN, type.CONSTRUCTOR_CODE, type.CURLY_CLOSE ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.ID ] = [ type.STMT ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.ID ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.ID ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.ID ] = [ type.CALL_FUNCTION ];
+/* 26 */	table[ type.PARAMETERS ][ type.ID ] = [ type.SIMPLE_CODE, type.PARAMETERS ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.ID ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.ID ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.ID ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.ID ] = [ type.ID, type.DEF, type.SIMPLE_CODE, type.SEMICOLON ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.ID ] = [ type.ARG, type.ARGS ];
+/* 32 */	table[ type.ARGS ][ type.ID ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.ID ] = [ type.PARAMETER ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.ID ] = [ type.ID, type.FUNC ];
+/* 35 */	table[ type.FUNC ][ type.ID ] = [ type.EMPTY ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.IF ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.IF ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.IF ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.IF ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.IF ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.IF ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.IF ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.IF ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.IF ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.IF ] = [ type.SIMPLE_STMT ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.IF ] = [ type.IF, type.OPEN, type.EXPR, type.CLOSE, type.CURLY_OPEN, type.STMT, type.CURLY_CLOSE, type.ELSE_STMT ];
+/* 13 */	table[ type.ELSE_STMT ][ type.IF ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.IF ] = [ type.STMT ];
+/* 15 */	table[ type.EXPR ][ type.IF ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.IF ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.IF ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.IF ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.IF ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.IF ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.IF ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.IF ] = [ type.STMT ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.IF ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.IF ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.IF ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.IF ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.IF ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.IF ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.IF ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.IF ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.IF ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.IF ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.IF ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.IF ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.IF ] = [ type.ERROR ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.ELSE ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.ELSE ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.ELSE ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.ELSE ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.ELSE ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.ELSE ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.ELSE ] = [ type.ERROR];
+/* 09 */	table[ type.SIGN ][ type.ELSE ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.ELSE ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.ELSE ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.ELSE ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.ELSE ] = [ type.ELSE, type.INNER_STMT ];
+/* 14 */	table[ type.INNER_STMT ][ type.ELSE ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.ELSE ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.ELSE ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.ELSE ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.ELSE ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.ELSE ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.ELSE ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.ELSE ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.ELSE ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.ELSE ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.ELSE ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.ELSE ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.ELSE ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.ELSE ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.ELSE ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.ELSE ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.ELSE ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.ELSE ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.ELSE ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.ELSE ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.ELSE ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.ELSE ] = [ type.ERROR ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.WHILE ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.WHILE ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.WHILE ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.WHILE ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.WHILE ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.WHILE ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.WHILE ] = [ type.ERROR];
+/* 09 */	table[ type.SIGN ][ type.WHILE ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.WHILE ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.WHILE ] = [ type.WHILE, type.OPEN, type.EXPR, type.CLOSE, type.CURLY_OPEN, type.STMT, type.CURLY_CLOSE ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.WHILE ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.WHILE ] = [ type.ERROR];
+/* 14 */	table[ type.INNER_STMT ][ type.WHILE ] = [ type.STMT ];
+/* 15 */	table[ type.EXPR ][ type.WHILE ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.WHILE ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.WHILE ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.WHILE ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.WHILE ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.WHILE ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.WHILE ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.WHILE ] = [ type.STMT ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.WHILE ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.WHILE ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.WHILE ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.WHILE ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.WHILE ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.WHILE ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.WHILE ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.WHILE ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.WHILE ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.WHILE ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.WHILE ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.WHILE ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.WHILE ] = [ type.ERROR ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.RETURN ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.RETURN ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.RETURN ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.RETURN ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.RETURN ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.RETURN ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.RETURN ] = [ type.ERROR];
+/* 09 */	table[ type.SIGN ][ type.RETURN ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.RETURN ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.RETURN ] = [ type.RETURN, type.SIMPLE_CODE, type.SEMICOLON ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.RETURN ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.RETURN ] = [ type.ERROR];
+/* 14 */	table[ type.INNER_STMT ][ type.RETURN ] = [ type.STMT ];
+/* 15 */	table[ type.EXPR ][ type.RETURN ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.RETURN ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.RETURN ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.RETURN ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.RETURN ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.RETURN ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.RETURN ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.RETURN ] = [ type.STMT ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.RETURN ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.RETURN ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.RETURN ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.RETURN ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.RETURN ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.RETURN ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.RETURN ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.RETURN ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.RETURN ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.RETURN ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.RETURN ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.RETURN ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.RETURN ] = [ type.ERROR ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.SUPER ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.SUPER ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.SUPER ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.SUPER ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.SUPER ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.SUPER ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.SUPER ] = [ type.ERROR];
+/* 09 */	table[ type.SIGN ][ type.SUPER ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.SUPER ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.SUPER ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.SUPER ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.SUPER ] = [ type.ERROR];
+/* 14 */	table[ type.INNER_STMT ][ type.SUPER ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.SUPER ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.SUPER ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.SUPER ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.SUPER ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.SUPER ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.SUPER ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.SUPER ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.SUPER ] = [ type.SUPER, type.OPEN, type.CLOSE, type.SEMICOLON, type.STMT ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.SUPER ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.SUPER ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.SUPER ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.SUPER ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.SUPER ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.SUPER ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.SUPER ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.SUPER ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.SUPER ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.SUPER ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.SUPER ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.SUPER ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.SUPER ] = [ type.ERROR ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.VALUE ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.VALUE ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.VALUE ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.VALUE ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.VALUE ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.VALUE ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.VALUE ] = [ type.ERROR];
+/* 09 */	table[ type.SIGN ][ type.VALUE ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.VALUE ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.VALUE ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.VALUE ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.VALUE ] = [ type.ERROR];
+/* 14 */	table[ type.INNER_STMT ][ type.VALUE ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.VALUE ] = [ type.SIMPLE_EXPR, type.LOGIC_OPERATION, type.SIMPLE_EXPR, type.EXPRS ];
+/* 16 */	table[ type.EXPRS ][ type.VALUE ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.VALUE ] = [ type.SIMPLE_CODE /*type.SIMPLE_CODE, type.LOGIC_OPERATION, type.SIMPLE_CODE*/ ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.VALUE ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.VALUE ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.VALUE ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.VALUE ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.VALUE ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.VALUE ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.VALUE ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.VALUE ] = [ type.VALUE ];
+/* 26 */	table[ type.PARAMETERS ][ type.VALUE ] = [ type.SIMPLE_CODE, type.PARAMETERS ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.VALUE ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.VALUE ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.VALUE ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.VALUE ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.VALUE ] = [ type.ARG, type.ARGS ];
+/* 32 */	table[ type.ARGS ][ type.VALUE ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.VALUE ] = [ type.PARAMETER ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.VALUE ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.VALUE ] = [ type.EMPTY ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.CURLY_OPEN ] = [ type.EMPTY ];
+/* 06 */	table[ type.BASE_CLASS ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.CURLY_OPEN ] = [ type.ERROR];
+/* 09 */	table[ type.SIGN ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.CURLY_OPEN ] = [ type.ERROR];
+/* 14 */	table[ type.INNER_STMT ][ type.CURLY_OPEN ] = [ type.CURLY_OPEN, type.STMT, type.CURLY_CLOSE ];
+/* 15 */	table[ type.EXPR ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.CURLY_OPEN ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.CURLY_OPEN ] = [ type.ERROR ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.CURLY_CLOSE ] = [ type.EMPTY ];
+/* 08 */	table[ type.DEC_CODE ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.CURLY_CLOSE ] = [ type.EMPTY ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.CURLY_CLOSE ] = [ type.EMPTY ];
+/* 14 */	table[ type.INNER_STMT ][ type.CURLY_CLOSE ] = [ type.EMPTY ];
+/* 15 */	table[ type.EXPR ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.CURLY_CLOSE ] = [ type.EMPTY ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.CURLY_CLOSE ] = [ type.ERROR ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.OPEN ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.OPEN ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.OPEN ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.OPEN ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.OPEN ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.OPEN ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.OPEN ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.OPEN ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.OPEN ] = [ type.FUNCTION_TAIL ];
+/* 11 */	table[ type.STMT ][ type.OPEN ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.OPEN ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.OPEN ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.OPEN ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.OPEN ] = [ type.SIMPLE_EXPR, type.LOGIC_OPERATION, type.SIMPLE_EXPR, type.EXPRS ];
+/* 16 */	table[ type.EXPRS ][ type.OPEN ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.OPEN ] = [ type.SIMPLE_CODE /*type.OPEN, type.SIMPLE_EXPR, type.CLOSE*/ ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.OPEN ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.OPEN ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.OPEN ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.OPEN ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.OPEN ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.OPEN ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.OPEN ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.OPEN ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.OPEN ] = [ type.SIMPLE_CODE, type.PARAMETERS ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.OPEN ] = [ type.OPEN, type.DEC_PARAMETERS, type.CLOSE, type.CURLY_OPEN, type.STMT, type.CURLY_CLOSE ];
+/* 28 */	table[ type.CREATE_VAR ][ type.OPEN ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.OPEN ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.OPEN ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.OPEN ] = [ type.OPEN, type.SIMPLE_CODE, type.CLOSE ];
+/* 32 */	table[ type.ARGS ][ type.OPEN ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.OPEN ] = [ type.SIMPLE_CODE ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.OPEN ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.OPEN ] = [ type.OPEN, type.PARAMETERS, type.CLOSE ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.CLOSE ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.CLOSE ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.CLOSE ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.CLOSE ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.CLOSE ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.CLOSE ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.CLOSE ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.CLOSE ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.CLOSE ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.CLOSE ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.CLOSE ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.CLOSE ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.CLOSE ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.CLOSE ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.CLOSE ] = [ type.EMPTY ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.CLOSE ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.CLOSE ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.CLOSE ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.CLOSE ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.CLOSE ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.CLOSE ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.CLOSE ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.CLOSE ] = [ type.EMPTY ];
+/* 25 */	table[ type.PARAMETER ][ type.CLOSE ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.CLOSE ] = [ type.EMPTY ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.CLOSE ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.CLOSE ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.CLOSE ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.CLOSE ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.CLOSE ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.CLOSE ] = [ type.EMPTY ];
+/* 33 */	table[ type.ARG ][ type.CLOSE ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.CLOSE ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.CLOSE ] = [ type.EMPTY ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.OPERATION ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.OPERATION ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.OPERATION ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.OPERATION ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.OPERATION ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.OPERATION ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.OPERATION ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.OPERATION ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.OPERATION ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.OPERATION ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.OPERATION ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.OPERATION ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.OPERATION ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.OPERATION ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.OPERATION ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.OPERATION ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.OPERATION ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.OPERATION ] = [ type.OPERATION ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.OPERATION ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.OPERATION ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.OPERATION ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.OPERATION ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.OPERATION ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.OPERATION ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.OPERATION ] = [ type.OPERATION, type.SIMPLE_CODE, type.PARAMETERS];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.OPERATION ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.OPERATION ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.OPERATION ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.OPERATION ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.OPERATION ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.OPERATION ] = [ type.OPERATION, type.ARG, type.ARGS ];
+/* 33 */	table[ type.ARG ][ type.OPERATION ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.OPERATION ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.OPERATION ] = [ type.EMPTY ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.LOGIC_OPERATION ] = [ type.LOGIC_OPERATION, type.SIMPLE_EXPR, type.EXPRS ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.LOGIC_OPERATION ] = [ type.LOGIC_OPERATION ];
+/* 19 */	table[ type.OPERATION ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.LOGIC_OPERATION ] = [ type.EMPTY ];
+/* 33 */	table[ type.ARG ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.LOGIC_OPERATION ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.LOGIC_OPERATION ] = [ type.EMPTY ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.DEF ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.DEF ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.DEF ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.DEF ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.DEF ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.DEF ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.DEF ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.DEF ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.DEF ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.DEF ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.DEF ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.DEF ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.DEF ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.DEF ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.DEF ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.DEF ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.DEF ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.DEF ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.DEF ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.DEF ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.DEF ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.DEF ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.DEF ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.DEF ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.DEF ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.DEF ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.DEF ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.DEF ] = [ type.DEF, type.SIMPLE_CODE ];
+/* 30 */	table[ type.DEF_VAR ][ type.DEF ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.DEF ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.DEF ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.DEF ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.DEF ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.DEF ] = [ type.ERROR ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.SEMICOLON ] = [ type.SEMICOLON ];
+/* 11 */	table[ type.STMT ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.SEMICOLON ] = [ type.SEMICOLON ];
+/* 30 */	table[ type.DEF_VAR ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.SEMICOLON ] = [ type.EMPTY ];
+/* 33 */	table[ type.ARG ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.SEMICOLON ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.SEMICOLON ] = [ type.EMPTY ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.COMA ] = [ type.ERROR ];
+/* 03 */	table[ type.CLASS_CODE ][ type.COMA ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.COMA ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.COMA ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.COMA ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.COMA ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.COMA ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.COMA ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.COMA ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.COMA ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.COMA ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.COMA ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.COMA ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.COMA ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.COMA ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.COMA ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.COMA ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.COMA ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.COMA ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.COMA ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.COMA ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.COMA ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.COMA ] = [ type.COMA, type.DEC_PARAMETER, type.DEC_PARAMETERS ];
+/* 25 */	table[ type.PARAMETER ][ type.COMA ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.COMA ] = [ type.COMA, type.SIMPLE_CODE, type.PARAMETERS ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.COMA ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.COMA ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.COMA ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.COMA ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.COMA ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.COMA ] = [ type.EMPTY ];
+/* 33 */	table[ type.ARG ][ type.COMA ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.COMA ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.COMA ] = [ type.EMPTY ];
+
+
+/* 02 */	table[ type.PROGRAM ][ type.$ ] = [ type.EMPTY ];
+/* 03 */	table[ type.CLASS_CODE ][ type.$ ] = [ type.ERROR ];
+/* 04 */	table[ type.CLASS_DEFINITION ][ type.$ ] = [ type.ERROR ];
+/* 05 */	table[ type.EXTENDS_CLASS ][ type.$ ] = [ type.ERROR ];
+/* 06 */	table[ type.BASE_CLASS ][ type.$ ] = [ type.ERROR ];
+/* 07 */	table[ type.CODE ][ type.$ ] = [ type.ERROR ];
+/* 08 */	table[ type.DEC_CODE ][ type.$ ] = [ type.ERROR ];
+/* 09 */	table[ type.SIGN ][ type.$ ] = [ type.ERROR ];
+/* 10 */	table[ type.CHOISE ][ type.$ ] = [ type.ERROR ];
+/* 11 */	table[ type.STMT ][ type.$ ] = [ type.ERROR ];
+/* 12 */	table[ type.SIMPLE_STMT ][ type.$ ] = [ type.ERROR ];
+/* 13 */	table[ type.ELSE_STMT ][ type.$ ] = [ type.ERROR ];
+/* 14 */	table[ type.INNER_STMT ][ type.$ ] = [ type.ERROR ];
+/* 15 */	table[ type.EXPR ][ type.$ ] = [ type.ERROR ];
+/* 16 */	table[ type.EXPRS ][ type.$ ] = [ type.ERROR ];
+/* 17 */	table[ type.SIMPLE_EXPR ][ type.$ ] = [ type.ERROR ];
+/* 18 */	table[ type.LOGIC_OPERATION ][ type.$ ] = [ type.ERROR ];
+/* 19 */	table[ type.OPERATION ][ type.$ ] = [ type.ERROR ];
+/* 20 */	table[ type.FIELD_TYPE ][ type.$ ] = [ type.ERROR ];
+/* 21 */	table[ type.CONSTRUCTOR ][ type.$ ] = [ type.ERROR ];
+/* 22 */	table[ type.CONSTRUCTOR_CODE ][ type.$ ] = [ type.ERROR ];
+/* 23 */	table[ type.DEC_PARAMETER ][ type.$ ] = [ type.ERROR ];
+/* 24 */	table[ type.DEC_PARAMETERS ][ type.$ ] = [ type.ERROR ];
+/* 25 */	table[ type.PARAMETER ][ type.$ ] = [ type.ERROR ];
+/* 26 */	table[ type.PARAMETERS ][ type.$ ] = [ type.ERROR ];
+/* 27 */	table[ type.FUNCTION_TAIL ][ type.$ ] = [ type.ERROR ];
+/* 28 */	table[ type.CREATE_VAR ][ type.$ ] = [ type.ERROR ];
+/* 29 */	table[ type.VAR ][ type.$ ] = [ type.ERROR ];
+/* 30 */	table[ type.DEF_VAR ][ type.$ ] = [ type.ERROR ];
+/* 31 */	table[ type.SIMPLE_CODE ][ type.$ ] = [ type.ERROR ];
+/* 32 */	table[ type.ARGS ][ type.$ ] = [ type.ERROR ];
+/* 33 */	table[ type.ARG ][ type.$ ] = [ type.ERROR ];
+/* 34 */	table[ type.CALL_FUNCTION ][ type.$ ] = [ type.ERROR ];
+/* 35 */	table[ type.FUNC ][ type.$ ] = [ type.ERROR ];
+			
+			
+			
+			
+            var tokens = [];
+            var index = 0;
+
+            function term(type){
+                return (tokens[index++].type == type);
+            }
+
+            function Token(word){
+                this.lineNumber = 0;
+                this.value = word;
+                this.isTerminal = false;
+				
+				this.toString = function() {
+					var str = "Token{";
+					str += " lineNumber: " + this.lineNumber;
+					str += " value: " + this.value;
+					str += " isTerminal: " + this.isTerminal;
+					str += " type: " + this.type;
+					str += " typeName: " + this.typeName;
+					str += " }";
+					return str;
+				}
+				
+                this.equals = function(other) {
+                    return ( this.type == other.type )
+                }
+				
+				this.setType = function( set_type ) {
+					this.type = set_type;
+					this.typeName = getTypeById(set_type);
+					this.isTerminal = ( set_type == type.FIELD_TYPE || 
+										set_type == type.VALUE ||
+										set_type == type.LOGIC_OPERATION ||
+										set_type == type.CURLY_OPEN ||
+										set_type == type.CURLY_CLOSE ||
+										set_type == type.OPEN ||
+										set_type == type.CLOSE ||
+										set_type == type.CLASS ||
+										set_type == type.IF ||
+										set_type == type.ELSE ||
+										set_type == type.WHILE ||
+										set_type == type.RETURN ||
+										set_type == type.PUBLIC ||
+										set_type == type.EXTENDS ||
+										set_type == type.SUPER ||
+										set_type == type.SEMICOLON ||
+										set_type == type.COMA ||
+										set_type == type.VOID ||
+										set_type == type.DEF ||
+										set_type == type.OPERATION ||
+										set_type == type.ID ||
+										set_type == type.$ );
+				}
+				
+                this.getType = function (word) {
+                    var field_type = /int|boolean|double/;
+                    var id = /^[A-Za-z]([A-Za-z0-9_])*$/;
+                    var value = /true|false|^[0-9]+(\.[0-9]+)?$/;
+                    var operation = /\+|-|\*|\/|%/;
+                    var logic_operation = />=|<=|==|>|<|!=|&&|[\|]{2}/;
+                    var terminal = /{|}|\(|\)|;|,|public|if|else|while|class|void|super|extends|return|=/;
+					//;
+                    if(word.search(field_type) != -1){
+                        this.isTerminal = true;
+                        return type.FIELD_TYPE;
+
+                    }  else if(word.search(value) != -1){
+                        this.isTerminal = true;
+                        return type.VALUE;
+
+                    }   else if(word.search(logic_operation) != -1){
+                        this.isTerminal = true;
+                        return type.LOGIC_OPERATION;
+
+                    } else if(word.search(terminal) != -1){
+                        if(word == "{"){
+                            this.isTerminal = true;
+                            return type.CURLY_OPEN;
+                        } else if(word == "}"){
+                            this.isTerminal = true;
+                            return type.CURLY_CLOSE;
+                        } else if(word == "("){
+                            this.isTerminal = true;
+                            return type.OPEN;
+                        } else if(word == ")"){
+                            this.isTerminal = true;
+                            return type.CLOSE;
+                        } else if(word == "class"){
+                            this.isTerminal = true;
+                            return type.CLASS;
+                        } else if(word == "if"){
+                            this.isTerminal = true;
+                            return type.IF;
+                        } else if(word == "else"){
+                            this.isTerminal = true;
+                            return type.ELSE;
+                        } else if(word == "while"){
+                            this.isTerminal = true;
+                            return type.WHILE;
+                        } else if(word == "return"){
+                            this.isTerminal = true;
+                            return type.RETURN;
+                        } else if(word == "public"){
+                            this.isTerminal = true;
+                            return type.PUBLIC;
+                        } else if(word == "extends"){
+                            this.isTerminal = true;
+                            return type.EXTENDS;
+                        } else if(word == "super"){
+                            this.isTerminal = true;
+                            return type.SUPER;
+                        } else if(word == ";"){
+                            this.isTerminal = true;
+                            return type.SEMICOLON;
+                        } else if(word == ","){
+                            this.isTerminal = true;
+                            return type.COMA;
+                        } else if(word == "void"){
+                            this.isTerminal = true;
+                            return type.VOID;
+                        } else if(word == "="){
+                            this.isTerminal = true;
+                            return type.DEF;
+                        }
+
+                    } else if(word.search(operation) != -1){
+                        this.isTerminal = true;
+                        return type.OPERATION;
+
+                    } else if(word.search(id) != -1){
+                        this.isTerminal = true;
+                        return type.ID;
+
+                    }
+
+                    return type.DEFAULT;
+                }
+
+                this.type = this.getType(word);
+				this.typeName = getTypeById( this.type );
+            }
+
+
+
+
+            function log(msg){
+				var log_text = $("#result").html();
+                log_text += "<br>" + msg;
+                $("#result").html(log_text);
+            }
+
+            function process(){
+                tokens = parsing();
+                predictive_parsing( init() );
+				
+				semanticParsing();
+				
+				tetradGen();
+            }
+
+
+			function init() {
+				var stack = [];
+				
+				var bottom_stack = new Token("");
+				bottom_stack.setType( type.$ );
+				stack.push( bottom_stack );
+				
+				var start_simbol = new Token("");
+				start_simbol.setType( type.PROGRAM );
+				stack.push( start_simbol );
+				
+				return stack;
+			}
+
+		
+			
+			function predictive_parsing( stack ) {
+				log("<br><br> &nbsp&nbsp-----====== SYNTAX ANALYSIS =====-----");
+				var tokenIndex = tokens.length - 1;
+				var error = false;
+				while ( stack.length > 0 ) {
+					var s = stack [ stack.length - 1 ];
+					var t = tokens [ tokenIndex ];
+					
+					if( s.isTerminal ) {
+						if( s.equals(t) ) {
+							stack.pop();
+							--tokenIndex;
+						} else {
+							log("Error at line " + t.lineNumber + " expected " + s.typeName + " but was " + t.typeName + " ' " + t.value + " '");
+							error = true;
+							
+							break;
+						}
+					} else {
+						var temp = table[ s.type ][ t.type ];
+						if ( temp[0] == type.ERROR ) {
+							log("Error at line " + t.lineNumber + " expected " + s.typeName + " but was " + t.typeName + " ' " + t.value + " '");
+							error = true;
+							
+							break;
+						} else if ( temp[0] == type.EMPTY ) {
+							stack.pop();	
+						} else {
+							stack.pop();
+							for(var i = temp.length - 1; i >= 0; --i) {
+								var token = new Token("");
+								token.setType( temp[i] );
+								stack.push( token );	
+							}	
+						}
+					}
+					
+				}
+				
+				if( !error ) {
+					log("Parsed successful!");
+				}
+					
+			}
+
+
+			var symbolType = {
+				"null":0,
+				"class":1,
+				"field":2,
+				"method":3
+			}
+			
+			var paramType = {
+				"null":0,
+				"int":1,
+				"double":2,
+				"boolean":3,
+				"void":4
+			}
+			
+			function getById(object, name){
+				for(var key in object){
+					if(object[key] == name){
+						return key;
+					}
+				}
+			}
+
+			function Symbol(token){
+				this.name = token.value;
+				
+				this.lineNumber = token.lineNumber;
+				
+				this.type = symbolType.null;
+				this.typeName = "";
+				
+				this.setSymbolType = function ( type ) {
+					this.type = symbolType[type];
+					this.typeName = type;
+				}
+				
+				this.fieldType = paramType.null;
+				this.fieldTypeName = "";
+				
+				this.setFieldType = function ( type ) {
+					this.fieldType = paramType[type];
+					this.fieldTypeName = type;
+				}
+				
+				this.returnType = paramType.null;
+				this.returnTypeName = "";
+				
+				this.setReturnType = function (type) {
+					this.returnType = paramType[type];
+					this.returnTypeName = type;
+				}
+				
+				this.param = [];
+				
+				this.isType = function(type){
+					return this.symbolType == type;
+				}	
+
+			}
+						
+			function Scope(parentScope, lineNumber) {
+				this.parentScope = parentScope;
+				this.table = [];
+				this.childScopes = [];
+				this.lineNumber = lineNumber;
+				
+				this.add = function(symbol) {
+					this.table.push(symbol);
+				}
+				
+				this.isDublicates = function (symbolName) {
+					for (var i in this.table) {
+						if ( this.table[i].name == symbolName ) {
+							return true;
+						}
+					}
+					return false;
+				}
+				
+				this.search = function(symbolName) {
+					
+					for (var i in this.table) {
+						if ( this.table[i].name == symbolName ) {
+							return this.table[i];
+						}
+					}
+					
+					var parent = this.parentScope;
+					while ( parent != null ) {
+						for (var i in parent.table) {
+							if ( parent.table[i].name == symbolName ) {
+								return parent.table[i];
+							}
+						}
+						parent = parent.parentScope;
+					}
+					
+					return null;
+				}
+				
+				
+				this.isSearchedInLocalScope = function(symbolName) {
+					var searched = false;
+					for (var i in this.table) {
+						if ( this.table[i].name == symbolName ) {
+							searched = true;
+							break;
+						}
+					}
+					return searched;
+				}
+				
+				this.isSearchedInParentScope = function(symbolName) {
+					var searched = false;
+					var parent = this.parentScope;
+					while ( parent != null && !searched ) {
+						for (var i in parent.table) {
+							if ( parent.table[i].name == symbolName ) {
+								searched = true;
+								break;
+							}
+						}
+						parent = parent.parentScope;
+					}
+					return searched;
+				}
+				
+			}
+			
+			
+			function SymbolTable(){
+				this.rootScope = new Scope(null, 0);
+				this.currentScope = this.rootScope;
+				this.currentClassName = "";
+				
+				this.enterScope = function (lineNumber) {
+					var childScopes = this.currentScope.childScopes;
+					for (var i in childScopes) {
+						if ( childScopes[i].lineNumber == lineNumber ) {
+							this.currentScope = childScopes[i];
+							return;
+						}
+					}
+					var scope = new Scope(this.currentScope, lineNumber);
+					this.currentScope.childScopes.push(scope);
+					this.currentScope = scope;
+				}
+				
+				this.exitScope = function () {
+					var parent = this.currentScope.parentScope;
+					this.currentScope = parent;
+				}
+				
+				this.add = function(symbol) {
+					this.currentScope.add(symbol);
+					if ( symbol.type == symbolType.class ) {
+						this.currentClassName = symbol.name;
+					}
+				}
+				
+				this.search = function(symbolName) {
+					return this.currentScope.search(symbolName);
+				}
+				
+				this.isDublicates = function (symbolName) {
+					return this.currentScope.isDublicates(symbolName);
+				}
+				
+				this.isSearchedInLocalScope = function(symbolName) {
+					return this.currentScope.isSearchedInLocalScope(symbolName);
+				}
+				
+				this.isSearchedInParentScope = function(symbolName) {
+					return this.currentScope.isSearchedInParentScope(symbolName);
+				}
+				
+				
+			}
+
+			
+			
+			function semanticParsing() {
+				var symbolTable = new SymbolTable();
+				log("<br><br> &nbsp&nbsp----====== SEMANTIC ANALYSIS =====----");
+				var error = false;
+				
+				// phase 1
+				
+				for (var i = tokens.length - 1; i >=0; --i) {
+					
+					switch( tokens[i].type ) {
+						
+					case type.CLASS : 
+						if ( tokens[i-1].type == type.ID ) {
+							if ( !symbolTable.isDublicates(tokens[i-1].value) ) {
+								var symbol = new Symbol(tokens[i-1]);
+								symbol.setSymbolType("class");	
+								symbolTable.add(symbol);
+							} else {
+								log("Error at line " +  tokens[i-1].lineNumber + " class with such name as '" + tokens[i-1].value + "' is already declared.");
+								error = true;
+							}	
+							i--;
+						}
+						break;
+						
+					case type.PUBLIC :
+						/* constructor */
+						if (tokens[i-1].type == type.ID && tokens[i-2].type == type.OPEN) {
+							if ( symbolTable.currentClassName != tokens[i-1].value ) {
+								log("Error at line " + tokens[i-1].lineNumber + " constructor name '" + tokens[i-1].value + "' does't match with class name '" + symbolTable.currentClassName + "'.");
+								error = true;
+							}
+							
+							var j;
+							var params = [];
+							var unique = {};
+							for (j = i-3; tokens[j].type != type.CLOSE; --j) {
+								if ( tokens[j].type == type.FIELD_TYPE && tokens[j-1].type == type.ID) {
+								
+									if ( unique[ tokens[j-1].value ] === undefined ) {
+										unique[ tokens[j-1].value ] = 1;
+										var symbol = new Symbol( tokens[j-1] );
+										symbol.setSymbolType("field");
+										symbol.setFieldType( tokens[j].value );
+										params.push(symbol);
+									} else {
+										log("Error at line " + tokens[j-1].lineNumber + " dublicate declaretion of argument '" + tokens[j-1].value  + "'.");
+										error = true;
+									}
+									--j;
+								}
+							}
+							
+							i = j - 1;
+							if ( tokens[i].type == type.CURLY_OPEN ) {
+								symbolTable.enterScope( tokens[i].lineNumber );
+								
+								for (var k in params) {
+									symbolTable.add(params[k]);
+								}
+							}
+							
+							
+						} else /* field declaretion */
+						if (tokens[i-3].type == type.SEMICOLON && tokens[i-2].type == type.ID && tokens[i-1].type == type.FIELD_TYPE ) {
+							
+							if ( !symbolTable.isDublicates(tokens[i-2].value) ) {
+								var symbol = new Symbol( tokens[i-2] );
+								symbol.setSymbolType("field");
+								symbol.setFieldType(tokens[i-1].value);
+								symbolTable.add(symbol);
+							} else {
+								log("Error at line " +  tokens[i-2].lineNumber + " class member with such name as '" + tokens[i-2].value + "' is already declared in class " + symbolTable.currentClassName);
+								error = true;
+							}
+							i -= 3;
+							
+						} else /* function declaretion */
+						if ( tokens[i-3].type == type.OPEN && tokens[i-2].type == type.ID && (tokens[i-1].type == type.VOID || tokens[i-1].type == type.FIELD_TYPE) ) {
+							
+							if ( symbolTable.isDublicates(tokens[i-2].value) ) {
+								log("Error at line " +  tokens[i-2].lineNumber + " class method with such name as '" + tokens[i-2].value + "' is already declared in this class "  + symbolTable.currentClassName);
+								error = true;
+							} else {
+							
+								var methodSymbol = new Symbol( tokens[i-2] );
+								methodSymbol.setSymbolType("method");
+								methodSymbol.setReturnType(tokens[i-1].value);
+								var j;
+								var params = [];
+								var unique = {};
+								for (j = i-4; tokens[j].type != type.CLOSE; --j) {
+									if ( tokens[j].type == type.FIELD_TYPE && tokens[j-1].type == type.ID) {
+										if ( unique[ tokens[j-1].value ] === undefined ) {
+											unique[ tokens[j-1].value ] = 1;
+											var symbol = new Symbol( tokens[j-1] );
+											symbol.setSymbolType("field");
+											symbol.setFieldType( tokens[j].value );
+											methodSymbol.param.push( symbol.type );
+											
+											params.push(symbol);
+										} else {
+											log("Error at line " + tokens[j-1].lineNumber + " dublicate declaretion of argument '" + tokens[j-1].value  + "'.");
+											error = true;
+										}
+										--j;
+									}
+								}
+								
+								symbolTable.add(methodSymbol);
+								
+								i = j - 1;
+								if ( tokens[i].type == type.CURLY_OPEN ) {
+									symbolTable.enterScope( tokens[i].lineNumber );
+									
+									for (var k in params) {
+										symbolTable.add(params[k]);
+									}
+								}
+							}
+						}
+						break;
+					
+					case type.CURLY_OPEN : 
+						symbolTable.enterScope( tokens[i].lineNumber );
+						break;
+						
+					case type.CURLY_CLOSE : 
+						symbolTable.exitScope();
+						break;	
+					
+					case type.FIELD_TYPE :
+						if ( tokens[i-1].type == type.ID && ( tokens[i-2].type == type.DEF || tokens[i-2].type == type.SEMICOLON ) ) {
+							var symbol = new Symbol(tokens[i-1]);
+							symbol.setSymbolType("field");
+							symbolTable.add(symbol);
+							i--;
+						}
+						break;
+					}
+					
+				}
+				
+				
+				// phase 2
+				
+				
+				for (var i = tokens.length - 1; i >=0; --i) {
+				
+					switch(tokens[i].type) {
+					
+						case type.CLASS : 
+							if ( tokens[i-2].type == type.EXTENDS && tokens[i-3].type == type.ID ) {
+								var searched = symbolTable.search( tokens[i-3].value );
+								if ( searched === null || searched === undefined ) {
+									log("Error at line " + tokens[i-3].lineNumber + " class with such name '" + tokens[i-3].value + "' wasn't declared.");
+									error = true;
+								}
+								i -= 3;
+							}
+							break;
+					
+						case type.CURLY_OPEN : 
+							symbolTable.enterScope( tokens[i].lineNumber );
+							break;
+						
+						case type.CURLY_CLOSE : 
+							symbolTable.exitScope();
+							break;
+
+						case type.PUBLIC :
+							/* constructor */
+							if (tokens[i-1].type == type.ID && tokens[i-2].type == type.OPEN) {
+								var j;
+								for (j = i-3; tokens[j].type != type.CLOSE; --j) {
+									if ( tokens[j].type == type.FIELD_TYPE && tokens[j-1].type == type.ID) {
+										--j;
+									}
+								}
+								i = j - 1;
+								if ( tokens[i].type == type.CURLY_OPEN ) {
+									symbolTable.enterScope( tokens[i].lineNumber );
+								}
+							} else /* field declaretion */
+							if (tokens[i-3].type == type.SEMICOLON && tokens[i-2].type == type.ID && tokens[i-1].type == type.FIELD_TYPE ) {
+								i -= 3;
+							} else /* function declaretion */
+							if ( tokens[i-3].type == type.OPEN && tokens[i-2].type == type.ID && (tokens[i-1].type == type.VOID || tokens[i-1].type == type.FIELD_TYPE) ) {
+								var j;
+								for (j = i-4; tokens[j].type != type.CLOSE; --j) {
+									if ( tokens[j].type == type.FIELD_TYPE && tokens[j-1].type == type.ID) {
+										--j;
+									}
+								}
+								i = j - 1;
+								if ( tokens[i].type == type.CURLY_OPEN ) {
+									symbolTable.enterScope( tokens[i].lineNumber );
+								}
+							}
+							break;
+					
+						case type.ID : 
+							/* identifier */
+							if ( tokens[i-1].type != type.OPEN ) {
+								var searched = symbolTable.search( tokens[i].value );
+								if ( searched === null || searched === undefined ) {
+									log("Error at line " + tokens[i].lineNumber + " used undeclared identifier '" + tokens[i].value + "'.");
+									error = true;
+								} else if (  symbolTable.isSearchedInLocalScope(tokens[i].value) && searched.lineNumber > tokens[i].lineNumber ) {
+									log("Error at line " + tokens[i].lineNumber + " used undeclared identifier '" + tokens[i].value + "'.");
+									error = true;
+								} else if ( searched.type ==  symbolType.method ) {
+									log("Error at line " + tokens[i].lineNumber + " invalid usage of method '" + tokens[i].value + "' without '()' .");
+									error = true;
+								}
+								
+								
+							} /* function call */
+							else {
+								var searched = symbolTable.search( tokens[i].value );
+								if ( searched === null || searched === undefined ) {
+									log("Error at line " + tokens[i].lineNumber + " used undeclared method '" + tokens[i].value + "'.");
+									error = true;
+								} else {
+								
+									var argsCount = 0;
+									var dontCount = false;
+									var comaCount = 0;
+									for ( var j = i-2; ; --j) {
+										
+										if ( tokens[j].type == type.ID || tokens[j].type == type.VALUE) {
+											++argsCount;
+										}
+										
+										if ( tokens[j].type == type.COMA && !dontCount) {
+											++comaCount;
+										} else if ( tokens[j].type == type.OPEN ) {
+											dontCount = true;
+										} else if ( tokens[j].type == type.CLOSE && !dontCount ) {
+											break;
+										} else if ( tokens[j].type == type.CLOSE ) {
+											dontCount = false;
+										}
+									}
+									comaCount = (argsCount == 0) ? comaCount : comaCount + 1;
+									if ( searched.param.length != comaCount ) {
+										log("Error at line " + tokens[i].lineNumber + " method '" + tokens[i].value + "' has another amount of arguments.");
+										error = true;
+									}
+									
+								
+								}
+							
+							}
+							break;
+					
+					}
+					
+				
+				
+				}
+				
+				
+				
+				if (!error) {
+					log("Parsed successful.");
+				}
+				log("Semantic analysis finished.");
+			}
+
+			var TETRAD_OPERATION = [
+									"$BLOCK",
+									"$BLOCKEND",
+									"$CALL",
+									"$BRF",
+									"$BR", 
+									"+",
+									"-",
+									"/",
+									"*",
+									"%",
+									"=",
+									">",
+									"<",
+									">=",
+									"<=",
+									"==",
+									"!=",
+									"&&", 
+									"||"
+								  ];
+				
+			var TETRAD_OPER_TYPE = {
+									"$BLOCK":0,
+									"$BLOCKEND":1,
+									"$CALL":2,
+									"$BRF":3,
+									"$BR":4, 
+									"ADD":5,
+									"SUB":6,
+									"DIV":7,
+									"MULT":8,
+									"PROC":9,
+									"DEF":10,
+									"G":11,
+									"L":12,
+									"GE":13,
+									"LE":14,
+									"E":15,
+									"NE":16,
+									"AND":17, 
+									"OR":18
+								  };				
+			
+			
+			function Tetrada() {
+				this.index = 0;
+				this.operation = "";
+				this.arg1 = "";
+				this.arg2 = "";
+				this.result;
+				
+				this.value = "";
+				
+				this.toString = function() {
+					var str = "(" + this.index + ") ";
+					if ( this.value.length == 0 ) {
+						str += this.operation + ", ";
+						str += this.arg1 + ", ";
+						str += this.arg2 + ", ";
+						str += this.result;
+					} else {
+						str += this.value;
+					}
+					
+					return str;
+				}
+				
+			}
+			
+			
+			function tetradGen() {
+				log("<br><br> &nbsp&nbsp-----========= TETRAD GEN ========-----");
+				var tetrads = [];
+				var counter = 0;
+				var tempCounter = 0;
+				var T = function() { return "T" + ++tempCounter; }
+				
+				for (var i = tokens.length - 1; i >= 0; --i) {
+					
+					switch ( tokens[i].type ) {
+					
+						case type.CLASS : 
+						
+							if (tokens[i-1].type == type.ID) {
+								
+								var tetrada = new Tetrada();
+								tetrada.index = ++counter;
+								tetrada.value = TETRAD_OPERATION[ TETRAD_OPER_TYPE.$BLOCK ] + " class " + tokens[i-1].value;
+								tetrads.push(tetrada);
+							
+								var j = i - 1;
+								for( ; tokens[j].type != type.CURLY_OPEN; --j );
+								i = j;
+							}
+							break;
+					
+						case type.PUBLIC : 
+						
+							/* constructor */
+							if (tokens[i-1].type == type.ID && tokens[i-2].type == type.OPEN) {
+								var tetrada = new Tetrada();
+								tetrada.index = ++counter;
+								tetrada.value = TETRAD_OPERATION[ TETRAD_OPER_TYPE.$BLOCK ] + " constructor " + tokens[i-1].value;
+								tetrads.push(tetrada);
+							
+								var j = i - 2;
+								for( ; tokens[j].type != type.CURLY_OPEN; --j );
+								i = j;
+							} else /* function declaretion */
+							if ( tokens[i-3].type == type.OPEN && tokens[i-2].type == type.ID && (tokens[i-1].type == type.VOID || tokens[i-1].type == type.FIELD_TYPE) ) {
+								var tetrada = new Tetrada();
+								tetrada.index = ++counter;
+								tetrada.value = TETRAD_OPERATION[ TETRAD_OPER_TYPE.$BLOCK ] + " method " + tokens[i-2].value;
+								tetrads.push(tetrada);
+							
+								var j = i - 3;
+								for( ; tokens[j].type != type.CURLY_OPEN; --j );
+								i = j;
+							}
+							break;
+							
+						case type.ID : 
+							/* identifier */
+							if (tokens[i-1].type == type.DEF) {
+								
+								var stack = [];
+								
+								for (var j = i - 2; tokens[j].type != type.SEMICOLON; --j) {
+									stack.push( tokens[j] );
+								}
+								
+						var changed = false;		
+						var globalChanges = false;
+						do{
+							globalChanges = false;
+							
+							var changes = false;	
+							do{
+								var newStack = [];
+								changes = false;
+								for (var j = 0; j < stack.length; ++j) {
+									if ( j < stack.length - 2 ) {
+										var arg1 = stack[j];
+										var op = stack[j+1];
+										var arg2 = stack[j+2];
+										if ( j < stack.length - 3 && stack[j+3].type != type.OPEN && (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) ) {
+											if (op.value == "*" || op.value == "/" || op.value == "%") {
+												changes = true;
+												var tetrada = new Tetrada();
+												tetrada.index = ++counter;
+												tetrada.operation = op.value;
+												tetrada.arg1 = arg1.value;
+												tetrada.arg2 = arg2.value;
+												tetrada.result = T();
+												tetrads.push(tetrada);
+												
+												var token = new Token(tetrada.result);
+												token.type = type.ID;
+												newStack.push(token);
+												j += 2;
+											} else if ( (op.value == "+" || op.value == "-") && (stack[j+3].value != "*" && stack[j+3].value != "/" && stack[j+3].value != "%" ) ) {
+												changes = true;
+												var tetrada = new Tetrada();
+												tetrada.index = ++counter;
+												tetrada.operation = op.value;
+												tetrada.arg1 = arg1.value;
+												tetrada.arg2 = arg2.value;
+												tetrada.result = T();
+												tetrads.push(tetrada);
+												
+												var token = new Token(tetrada.result);
+												token.type = type.ID;
+												newStack.push(token);
+												j += 2;
+											} else {
+												newStack.push( stack[j] );
+											}
+											
+											
+										} else if (stack.length - j == 3 && op.type == type.OPERATION && (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) ){
+											var tetrada = new Tetrada();
+											tetrada.index = ++counter;
+											tetrada.operation = op.value;
+											tetrada.arg1 = arg1.value;
+											tetrada.arg2 = arg2.value;
+											tetrada.result = T();
+											tetrads.push(tetrada);
+											
+											var token = new Token(tetrada.result);
+											token.type = type.ID;
+											newStack.push(token);
+											j += 2;
+											
+										} else {
+											newStack.push( stack[j] );
+										}
+										
+									} else {
+										newStack.push( stack[j] );
+									} 
+									
+								}
+								
+								stack = newStack;
+								globalChanges = globalChanges || changes;
+							}while(changes);
+							
+							
+							do{
+								changes = false;
+								var newStack = [];
+								for (var j = 0; j < stack.length; ++j){
+									if(j <= stack.length - 3) {
+										if(stack[j].type == type.OPERATION && stack[j+1].type == type.OPEN && (stack[j+2].type == type.ID || stack[j+2].type == type.VALUE) && stack[j+3].type == type.CLOSE ){
+											changes = true;
+											newStack.push(stack[j]);
+											newStack.push(stack[j+2]);
+											j += 3;
+										} else {
+											newStack.push(stack[j]);
+										}
+									} else {
+										newStack.push(stack[j]);
+									}
+								}
+								stack = newStack;
+								globalChanges = globalChanges || changes;
+							}while(changes);
+							
+							
+						do{	
+							var newStack = [];
+							changes = false;
+							for (var j = 0; j < stack.length; ++j) {
+								if (stack[j].type == type.ID && j < stack.length - 2 && stack[j+1].type == type.OPEN) {
+									var simple = true;
+									var args = [];
+									var k = j + 2;
+									for ( ; k < stack.length && stack[k].type != type.CLOSE; ++k) {
+										if (stack[k].type == type.ID || stack[k].type == type.VALUE){
+											args.push( stack[k].value );
+										} else if (stack[k].type == type.OPERATION || stack[k].type == type.OPEN) {
+											simple = false;
+										}
+									}
+									
+									if (simple) {
+										changes = true;
+										args.push( T() );
+										var res = args[ args.length - 1 ];
+										for ( var s = 0; s < args.length; ++s) {
+											if ( s == 0 ) {
+												var tetrada = new Tetrada();
+												tetrada.index = ++counter;
+												tetrada.operation = TETRAD_OPERATION[ TETRAD_OPER_TYPE.$CALL ];
+												tetrada.arg1 = stack[j].value;
+												if ( args.length - s >= 2 ){
+													tetrada.arg2 = args[s];
+													tetrada.result = args[s+1];
+													s++;
+												} else {
+													tetrada.result = args[s];
+												}
+												tetrads.push(tetrada);
+												
+											} else {
+												var tetrada = new Tetrada();
+												tetrada.index = ++counter;
+												tetrada.operation = "";
+												
+												if ( args.length - s >= 3 ){
+													tetrada.arg1 = args[s];
+													tetrada.arg2 = args[s+1];
+													tetrada.result = args[s+2];
+													s += 2;
+												} else if ( args.length - s >= 2){
+													tetrada.arg1 = args[s];
+													tetrada.result = args[s+1];
+													s++;
+												} else {
+													tetrada.result = args[s];
+												}
+												tetrads.push(tetrada);
+											}
+										}
+										
+										var token = new Token(res);
+										token.type = type.ID;
+										newStack.push(token);
+										
+									} else {
+										newStack.push( stack[j] );
+									}
+									
+									j = k;
+									
+								} else {
+									newStack.push( stack[j] );
+								}
+								
+							}
+							
+							stack = newStack;
+							globalChanges = globalChanges || changes;
+							
+						}while(changes);	
+						
+						changed = changed || globalChanges;
+					}while(globalChanges);
+					
+					var tetrada = new Tetrada();
+					tetrada.index = ++counter;
+					tetrada.operation = "=";
+					tetrada.arg1 = (changed) ? tetrads[tetrads.length - 1].result : tokens[i-2].value;
+					tetrada.arg2 = "";
+					tetrada.result = tokens[i].value;
+					tetrads.push(tetrada);
+					
+									
+							}
+							break;
+							
+						case type.CURLY_CLOSE : 
+							var tetrada = new Tetrada();
+							tetrada.index = ++counter;
+							tetrada.value = TETRAD_OPERATION[ TETRAD_OPER_TYPE.$BLOCKEND ];
+							tetrads.push(tetrada);
+							break;
+						
+						
+						case type.FIELD_TYPE :
+							var j = i - 1;
+							for( ; tokens[j].type != type.SEMICOLON; --j);
+							i = j;
+							break;
+							
+						case type.IF : 
+						
+							var stack = [];
+							for(var j = i - 2; tokens[j].type != type.CLOSE && tokens[j-1].type != type.CURLY_OPEN; --j) {
+								stack.push(tokens[j]);
+							}
+							var changed = false;
+							var globalChanges = false;
+							do{
+								globalChanges = false;
+							
+								var changes = false;	
+								do{
+									var newStack = [];
+									changes = false;
+									for (var j = 0; j < stack.length; ++j) {
+										if ( j < stack.length - 2 ) {
+											var arg1 = stack[j];
+											var op = stack[j+1];
+											var arg2 = stack[j+2];
+											if ( j < stack.length - 3 && stack[j+3].type != type.OPEN && (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) ) {
+												if (op.value == "*" || op.value == "/" || op.value == "%") {
+													changes = true;
+													var tetrada = new Tetrada();
+													tetrada.index = ++counter;
+													tetrada.operation = op.value;
+													tetrada.arg1 = arg1.value;
+													tetrada.arg2 = arg2.value;
+													tetrada.result = T();
+													tetrads.push(tetrada);
+												
+													var token = new Token(tetrada.result);
+													token.type = type.ID;
+													newStack.push(token);
+													j += 2;
+												} else if ( (op.value == "+" || op.value == "-") && (stack[j+3].value != "*" && stack[j+3].value != "/" && stack[j+3].value != "%" ) ) {
+													changes = true;
+													var tetrada = new Tetrada();
+													tetrada.index = ++counter;
+													tetrada.operation = op.value;
+													tetrada.arg1 = arg1.value;
+													tetrada.arg2 = arg2.value;
+													tetrada.result = T();
+													tetrads.push(tetrada);
+												
+													var token = new Token(tetrada.result);
+													token.type = type.ID;
+													newStack.push(token);
+													j += 2;
+												} else {
+													newStack.push( stack[j] );
+												}
+											
+											
+											} else if (stack.length - j == 3 && op.type == type.OPERATION && (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) ){
+												var tetrada = new Tetrada();
+												tetrada.index = ++counter;
+												tetrada.operation = op.value;
+												tetrada.arg1 = arg1.value;
+												tetrada.arg2 = arg2.value;
+												tetrada.result = T();
+												tetrads.push(tetrada);
+											
+												var token = new Token(tetrada.result);
+												token.type = type.ID;
+												newStack.push(token);
+												j += 2;
+											
+											} else {
+												newStack.push( stack[j] );
+											}
+										
+										} else {
+											newStack.push( stack[j] );
+										} 
+									
+									}
+								
+									stack = newStack;
+									globalChanges = globalChanges || changes;
+								}while(changes);
+							
+							
+								do{
+									changes = false;
+									var newStack = [];
+									for (var j = 0; j < stack.length; ++j){
+										if(j <= stack.length - 3) {
+											if((stack[j].type == type.OPERATION || stack[j].type == type.LOGIC_OPERATION) && stack[j+1].type == type.OPEN && (stack[j+2].type == type.ID || stack[j+2].type == type.VALUE) && stack[j+3].type == type.CLOSE ){
+												changes = true;
+												newStack.push(stack[j]);
+												newStack.push(stack[j+2]);
+												j += 3;
+											} else {
+												newStack.push(stack[j]);
+											}
+										} else {
+											newStack.push(stack[j]);
+										}
+									}
+									stack = newStack;
+									globalChanges = globalChanges || changes;
+								}while(changes);
+							
+							
+							do{	
+								var newStack = [];
+								changes = false;
+								for (var j = 0; j < stack.length; ++j) {
+									if (stack[j].type == type.ID && j < stack.length - 2 && stack[j+1].type == type.OPEN) {
+										var simple = true;
+										var args = [];
+										var k = j + 2;
+										for ( ; k < stack.length && stack[k].type != type.CLOSE; ++k) {
+											if (stack[k].type == type.ID || stack[k].type == type.VALUE){
+												args.push( stack[k].value );
+											} else if (stack[k].type == type.OPERATION || stack[k].type == type.OPEN) {
+												simple = false;
+											}
+										}
+									
+										if (simple) {
+											changes = true;
+											args.push( T() );
+											var res = args[ args.length - 1 ];
+											for ( var s = 0; s < args.length; ++s) {
+												if ( s == 0 ) {
+													var tetrada = new Tetrada();
+													tetrada.index = ++counter;
+													tetrada.operation = TETRAD_OPERATION[ TETRAD_OPER_TYPE.$CALL ];
+													tetrada.arg1 = stack[j].value;
+													if ( args.length - s >= 2 ){
+														tetrada.arg2 = args[s];
+														tetrada.result = args[s+1];
+														s++;
+													} else {
+														tetrada.result = args[s];
+													}
+													tetrads.push(tetrada);
+												
+												} else {
+													var tetrada = new Tetrada();
+													tetrada.index = ++counter;
+													tetrada.operation = "";
+												
+													if ( args.length - s >= 3 ){
+														tetrada.arg1 = args[s];
+														tetrada.arg2 = args[s+1];
+														tetrada.result = args[s+2];
+														s += 2;
+													} else if ( args.length - s >= 2){
+														tetrada.arg1 = args[s];
+														tetrada.result = args[s+1];
+														s++;
+													} else {
+														tetrada.result = args[s];
+													}
+													tetrads.push(tetrada);
+												}
+											}
+										
+											var token = new Token(res);
+											token.type = type.ID;
+											newStack.push(token);
+										
+										} else {
+											newStack.push( stack[j] );
+										}
+									
+										j = k;
+									
+									} else {
+										newStack.push( stack[j] );
+									}
+								
+								}
+							
+								stack = newStack;
+								globalChanges = globalChanges || changes;
+							}while(changes);	
+						
+							
+							do{
+								changes = false;
+								var newStack = [];
+								for (var j = 0; j < stack.length; ++j) {
+									if ( j < stack.length - 2 ) {
+										var arg1 = stack[j];
+										var op = stack[j+1];
+										var arg2 = stack[j+2];
+										if ( (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) 
+											&& (op.value == ">" || op.value == "<" || op.value == ">=" || op.value == "<=" || op.value == "==" || op.value == "!=") ) {
+												var tetrada = new Tetrada();
+												tetrada.index = ++counter;
+												tetrada.operation = op.value;
+												tetrada.arg1 = arg1.value;
+												tetrada.arg2 = arg2.value;
+												tetrada.result = T();
+												tetrads.push(tetrada);
+												
+												var token = new Token(tetrada.result);
+												token.type = type.ID;
+												newStack.push(token);
+												changes = true;
+												j += 2;
+											} else {
+												newStack.push(stack[j]);
+											}
+										
+									} else {
+										newStack.push(stack[j]);
+									}
+								}
+								stack = newStack;
+								globalChanges = globalChanges || changes;
+							}while(changes);
+							
+							do{
+								changes = false;
+								var newStack = [];
+								for (var j = 0; j < stack.length; ++j) {
+									if ( j < stack.length - 2 ) {
+										var arg1 = stack[j];
+										var op = stack[j+1];
+										var arg2 = stack[j+2];
+										if ( (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) 
+											&& op.value == "&&" ) {
+												var tetrada = new Tetrada();
+												tetrada.index = ++counter;
+												tetrada.operation = op.value;
+												tetrada.arg1 = arg1.value;
+												tetrada.arg2 = arg2.value;
+												tetrada.result = T();
+												tetrads.push(tetrada);
+												
+												var token = new Token(tetrada.result);
+												token.type = type.ID;
+												newStack.push(token);
+												changes = true;
+												j += 2;
+											} else {
+												newStack.push(stack[j]);
+											}
+										
+									} else {
+										newStack.push(stack[j]);
+									}
+								}
+								stack = newStack;
+								globalChanges = globalChanges || changes;
+							}while(changes);
+							
+						
+							do{
+								changes = false;
+								var newStack = [];
+								for (var j = 0; j < stack.length; ++j) {
+									if ( j < stack.length - 2 ) {
+										var arg1 = stack[j];
+										var op = stack[j+1];
+										var arg2 = stack[j+2];
+										if ( (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) 
+											&& op.value == "||" ) {
+												var tetrada = new Tetrada();
+												tetrada.index = ++counter;
+												tetrada.operation = op.value;
+												tetrada.arg1 = arg1.value;
+												tetrada.arg2 = arg2.value;
+												tetrada.result = T();
+												tetrads.push(tetrada);
+												
+												var token = new Token(tetrada.result);
+												token.type = type.ID;
+												newStack.push(token);
+												changes = true;
+												j += 2;
+											} else {
+												newStack.push(stack[j]);
+											}
+										
+									} else {
+										newStack.push(stack[j]);
+									}
+								}
+								stack = newStack;
+								globalChanges = globalChanges || changes;
+							}while(changes);
+						
+							changed = changed || globalChanges;
+						}while(globalChanges);
+							
+						
+						var tetrada = new Tetrada();
+						tetrada.index = ++counter;
+						tetrada.operation = "$BRF ";
+						tetrada.result = (changed) ? tetrads[tetrads.length - 1].result : tokens[i-2].value;
+						var tetradStack = [];
+						tetradStack.push(tetrada);
+						
+						
+						
+						var j = i - 1;
+						for(; tokens[j].type != type.CURLY_OPEN; --j);
+						i = --j;
+						
+						
+						var stack = [];
+						for ( j = i; tokens[j].type != type.CURLY_CLOSE; --j) {
+							stack.push( tokens[j] );
+						}
+						i = j; // on '}'
+						
+						var localStack = [];
+						var start = 0;
+						for (var q = 0; q < stack.length; ++q) {
+							
+							if ( stack[q].type != type.SEMICOLON ) {
+								if(stack[q].type == type.ID && stack[q+1].type == type.DEF) { 
+									start = q;
+									q++;
+								} else {
+									localStack.push( stack[q] );
+								}
+							} else {
+								//---------------------------
+								
+								var changed = false;		
+								var globalChanges = false;
+								do{
+									globalChanges = false;
+							
+									var changes = false;	
+									do{
+										var newStack = [];
+										changes = false;
+										for (var j = 0; j < localStack.length; ++j) {
+											if ( j < localStack.length - 2 ) {
+												var arg1 = localStack[j];
+												var op = localStack[j+1];
+												var arg2 = localStack[j+2];
+												if ( j < localStack.length - 3 && localStack[j+3].type != type.OPEN && (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) ) {
+													if (op.value == "*" || op.value == "/" || op.value == "%") {
+														changes = true;
+														var tetrada = new Tetrada();
+														tetrada.index = ++counter;
+														tetrada.operation = op.value;
+														tetrada.arg1 = arg1.value;
+														tetrada.arg2 = arg2.value;
+														tetrada.result = T();
+														tetradStack.push(tetrada);
+												
+														var token = new Token(tetrada.result);
+														token.type = type.ID;
+														newStack.push(token);
+														j += 2;
+													} else if ( (op.value == "+" || op.value == "-") && (localStack[j+3].value != "*" && localStack[j+3].value != "/" && localStack[j+3].value != "%" ) ) {
+														changes = true;
+														var tetrada = new Tetrada();
+														tetrada.index = ++counter;
+														tetrada.operation = op.value;
+														tetrada.arg1 = arg1.value;
+														tetrada.arg2 = arg2.value;
+														tetrada.result = T();
+														tetradStack.push(tetrada);
+												
+														var token = new Token(tetrada.result);
+														token.type = type.ID;
+														newStack.push(token);
+														j += 2;
+													} else {
+														newStack.push( localStack[j] );
+													}
+											
+											
+												} else if (localStack.length - j == 3 && op.type == type.OPERATION && (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) ){
+													var tetrada = new Tetrada();
+													tetrada.index = ++counter;
+													tetrada.operation = op.value;
+													tetrada.arg1 = arg1.value;
+													tetrada.arg2 = arg2.value;
+													tetrada.result = T();
+													tetradStack.push(tetrada);
+											
+													var token = new Token(tetrada.result);
+													token.type = type.ID;
+													newStack.push(token);
+													j += 2;
+											
+												} else {
+													newStack.push( localStack[j] );
+												}
+										
+											} else {
+												newStack.push( localStack[j] );
+											} 
+									
+										}
+								
+										localStack = newStack;
+										globalChanges = globalChanges || changes;
+									}while(changes);
+							
+							
+									do{
+										changes = false;
+										var newStack = [];
+										for (var j = 0; j < localStack.length; ++j){
+											if(j <= localStack.length - 3) {
+												if(localStack[j].type == type.OPERATION && localStack[j+1].type == type.OPEN && (localStack[j+2].type == type.ID || localStack[j+2].type == type.VALUE) && localStack[j+3].type == type.CLOSE ){
+													changes = true;
+													newStack.push(localStack[j]);
+													newStack.push(localStack[j+2]);
+													j += 3;
+												} else {
+													newStack.push(localStack[j]);
+												}
+											} else {
+												newStack.push(localStack[j]);
+											}
+										}
+										localStack = newStack;
+										globalChanges = globalChanges || changes;
+									}while(changes);
+							
+							
+								do{	
+									var newStack = [];
+									changes = false;
+									for (var j = 0; j < localStack.length; ++j) {
+										if (localStack[j].type == type.ID && j < localStack.length - 2 && localStack[j+1].type == type.OPEN) {
+											var simple = true;
+											var args = [];
+											var k = j + 2;
+											for ( ; k < localStack.length && localStack[k].type != type.CLOSE; ++k) {
+												if (localStack[k].type == type.ID || localStack[k].type == type.VALUE){
+													args.push( localStack[k].value );
+												} else if (localStack[k].type == type.OPERATION || localStack[k].type == type.OPEN) {
+													simple = false;
+												}
+											}
+									
+											if (simple) {
+												changes = true;
+												args.push( T() );
+												var res = args[ args.length - 1 ];
+												for ( var s = 0; s < args.length; ++s) {
+													if ( s == 0 ) {
+														var tetrada = new Tetrada();
+														tetrada.index = ++counter;
+														tetrada.operation = TETRAD_OPERATION[ TETRAD_OPER_TYPE.$CALL ];
+														tetrada.arg1 = localStack[j].value;
+														if ( args.length - s >= 2 ){
+															tetrada.arg2 = args[s];
+															tetrada.result = args[s+1];
+															s++;
+														} else {
+															tetrada.result = args[s];
+														}
+														tetradStack.push(tetrada);
+												
+													} else {
+														var tetrada = new Tetrada();
+														tetrada.index = ++counter;
+														tetrada.operation = "";
+												
+														if ( args.length - s >= 3 ){
+															tetrada.arg1 = args[s];
+															tetrada.arg2 = args[s+1];
+															tetrada.result = args[s+2];
+															s += 2;
+														} else if ( args.length - s >= 2){
+															tetrada.arg1 = args[s];
+															tetrada.result = args[s+1];
+															s++;
+														} else {
+															tetrada.result = args[s];
+														}
+														tetradStack.push(tetrada);
+													}
+												}
+										
+												var token = new Token(res);
+												token.type = type.ID;
+												newStack.push(token);
+										
+											} else {
+												newStack.push( localStack[j] );
+											}
+									
+											j = k;
+									
+										} else {
+											newStack.push( localStack[j] );
+										}
+								
+									}
+							
+									localStack = newStack;
+									globalChanges = globalChanges || changes;
+							
+								}while(changes);	
+						
+								changed = changed || globalChanges;
+							}while(globalChanges);
+					
+							var tetrada = new Tetrada();
+							tetrada.index = ++counter;
+							tetrada.operation = "=";
+							tetrada.arg1 = (changed) ? tetradStack[tetradStack.length - 1].result : stack[start+2].value;
+							tetrada.arg2 = "";
+							tetrada.result = stack[start].value;
+							tetradStack.push(tetrada);
+								
+								
+								
+								
+								localStack = [];
+							} // if stack != ;
+						} // for q
+						
+						tetradStack[0].operation += "(" + (counter + 1) + ")";
+						
+						for(var ts = 0; ts < tetradStack.length; ++ts){
+							tetrads.push( tetradStack[ts] );
+						}
+						
+						if (tokens[i-1].type == type.ELSE) { 
+						
+							var tetradStack = [];
+							var tetrada = new Tetrada();
+							tetrada.index = ++counter;
+							tetrada.operation = "$BR";
+							tetrada.result = "";
+							tetradStack.push(tetrada);
+						
+							stack = [];
+							for ( j = i - 3; tokens[j].type != type.CURLY_CLOSE; --j) {
+								stack.push( tokens[j] );
+							}
+							i = j; // on '}'
+						
+							//=======================
+							
+							var localStack = [];
+							var start = 0;
+							for (var q = 0; q < stack.length; ++q) {
+							
+								if ( stack[q].type != type.SEMICOLON ) {
+									if(stack[q].type == type.ID && stack[q+1].type == type.DEF) { 
+										start = q;
+										q++;
+									} else {
+										localStack.push( stack[q] );
+									}
+								} else {
+									//---------------------------
+								
+									var changed = false;		
+									var globalChanges = false;
+									do{
+										globalChanges = false;
+							
+										var changes = false;	
+										do{
+											var newStack = [];
+											changes = false;
+											for (var j = 0; j < localStack.length; ++j) {
+												if ( j < localStack.length - 2 ) {
+													var arg1 = localStack[j];
+													var op = localStack[j+1];
+													var arg2 = localStack[j+2];
+													if ( j < localStack.length - 3 && localStack[j+3].type != type.OPEN && (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) ) {
+														if (op.value == "*" || op.value == "/" || op.value == "%") {
+															changes = true;
+															var tetrada = new Tetrada();
+															tetrada.index = ++counter;
+															tetrada.operation = op.value;
+															tetrada.arg1 = arg1.value;
+															tetrada.arg2 = arg2.value;
+															tetrada.result = T();
+															tetradStack.push(tetrada);
+												
+															var token = new Token(tetrada.result);
+															token.type = type.ID;
+															newStack.push(token);
+															j += 2;
+														} else if ( (op.value == "+" || op.value == "-") && (localStack[j+3].value != "*" && localStack[j+3].value != "/" && localStack[j+3].value != "%" ) ) {
+															changes = true;
+															var tetrada = new Tetrada();
+															tetrada.index = ++counter;
+															tetrada.operation = op.value;
+															tetrada.arg1 = arg1.value;
+															tetrada.arg2 = arg2.value;
+															tetrada.result = T();
+															tetradStack.push(tetrada);
+												
+															var token = new Token(tetrada.result);
+															token.type = type.ID;
+															newStack.push(token);
+															j += 2;
+														} else {
+															newStack.push( localStack[j] );
+														}
+											
+											
+													} else if (localStack.length - j == 3 && op.type == type.OPERATION && (arg1.type == type.ID || arg1.type == type.VALUE) && (arg2.type == type.ID || arg2.type == type.VALUE) ){
+														var tetrada = new Tetrada();
+														tetrada.index = ++counter;
+														tetrada.operation = op.value;
+														tetrada.arg1 = arg1.value;
+														tetrada.arg2 = arg2.value;
+														tetrada.result = T();
+														tetradStack.push(tetrada);
+											
+														var token = new Token(tetrada.result);
+														token.type = type.ID;
+														newStack.push(token);
+														j += 2;
+											
+													} else {
+														newStack.push( localStack[j] );
+													}
+										
+												} else {
+													newStack.push( localStack[j] );
+												} 
+									
+											}
+								
+											localStack = newStack;
+											globalChanges = globalChanges || changes;
+										}while(changes);
+							
+							
+										do{
+											changes = false;
+											var newStack = [];
+											for (var j = 0; j < localStack.length; ++j){
+												if(j <= localStack.length - 3) {
+													if(localStack[j].type == type.OPERATION && localStack[j+1].type == type.OPEN && (localStack[j+2].type == type.ID || localStack[j+2].type == type.VALUE) && localStack[j+3].type == type.CLOSE ){
+														changes = true;
+														newStack.push(localStack[j]);
+														newStack.push(localStack[j+2]);
+														j += 3;
+													} else {
+														newStack.push(localStack[j]);
+													}
+												} else {
+													newStack.push(localStack[j]);
+												}
+											}
+											localStack = newStack;
+											globalChanges = globalChanges || changes;
+										}while(changes);
+							
+							
+									do{	
+										var newStack = [];
+										changes = false;
+										for (var j = 0; j < localStack.length; ++j) {
+											if (localStack[j].type == type.ID && j < localStack.length - 2 && localStack[j+1].type == type.OPEN) {
+												var simple = true;
+												var args = [];
+												var k = j + 2;
+												for ( ; k < localStack.length && localStack[k].type != type.CLOSE; ++k) {
+													if (localStack[k].type == type.ID || localStack[k].type == type.VALUE){
+														args.push( localStack[k].value );
+													} else if (localStack[k].type == type.OPERATION || localStack[k].type == type.OPEN) {
+														simple = false;
+													}
+												}
+									
+												if (simple) {
+													changes = true;
+													args.push( T() );
+													var res = args[ args.length - 1 ];
+													for ( var s = 0; s < args.length; ++s) {
+														if ( s == 0 ) {
+															var tetrada = new Tetrada();
+															tetrada.index = ++counter;
+															tetrada.operation = TETRAD_OPERATION[ TETRAD_OPER_TYPE.$CALL ];
+															tetrada.arg1 = localStack[j].value;
+															if ( args.length - s >= 2 ){
+																tetrada.arg2 = args[s];
+																tetrada.result = args[s+1];
+																s++;
+															} else {
+																tetrada.result = args[s];
+															}
+															tetradStack.push(tetrada);
+												
+														} else {
+															var tetrada = new Tetrada();
+															tetrada.index = ++counter;
+															tetrada.operation = "";
+												
+															if ( args.length - s >= 3 ){
+																tetrada.arg1 = args[s];
+																tetrada.arg2 = args[s+1];
+																tetrada.result = args[s+2];
+																s += 2;
+															} else if ( args.length - s >= 2){
+																tetrada.arg1 = args[s];
+																tetrada.result = args[s+1];
+																s++;
+															} else {
+																tetrada.result = args[s];
+															}
+															tetradStack.push(tetrada);
+														}
+													}
+										
+													var token = new Token(res);
+													token.type = type.ID;
+													newStack.push(token);
+										
+												} else {
+													newStack.push( localStack[j] );
+												}
+									
+												j = k;
+									
+											} else {
+												newStack.push( localStack[j] );
+											}
+								
+										}
+							
+										localStack = newStack;
+										globalChanges = globalChanges || changes;
+							
+									}while(changes);	
+						
+									changed = changed || globalChanges;
+								}while(globalChanges);
+					
+								var tetrada = new Tetrada();
+								tetrada.index = ++counter;
+								tetrada.operation = "=";
+								tetrada.arg1 = (changed) ? tetrads[tetrads.length - 1].result : stack[start+2].value;
+								tetrada.arg2 = "";
+								tetrada.result = stack[start].value;
+								tetradStack.push(tetrada);
+								
+								
+								
+								
+									localStack = [];
+								} // if stack != ;
+							} // for q
+						
+							
+							tetradStack[0].arg1 = "(" + (counter + 1) + ")";
+							
+							
+							for( var t = 0; t < tetradStack.length; ++t) {
+								tetrads.push( tetradStack[t] );
+							}
+							
+							
+						
+						} // if ELSE
+						
+						
+						
+						
+						
+						break;
+						
+					}
+					
+					
+					
+					
+					
+				
+				}
+				
+				for (var t = 0; t < tetrads.length; ++t) {
+					log(tetrads[t].toString());
+				}
+				
+			}
+			
+			
+			
+			
+
+			function parsing(){
+			
+				var keywords = /(\s*|\(|\{)class|extends|public|return|int|boolean|double|void|if|else|while(\s*|\(|]{)/;
+			
+				var brackets = /\(|\)|\{|\}|\[|\]/;
+			
+				var separators = /;|,|\s|\n|\t/;
+			
+				var operations = /\+|-|\*|\/|>=|<=|[=]{2}|>|<|!=|&&|%|[\|]{2}|=/;
+			
+				var number = /^[0-9]+(\.[0-9]+)?$/; //([Ee][\+-]?[0-9]+)?
+				var id = /^[A-Za-z]([A-Za-z0-9_])*$/;
+				
+				var listing = document.getElementById("edit").value;
+				
+				var block_comment = false;
+				var line_comment = false;
+				var comment_start = -1;
+				var comment_end = -1;
+				do{
+					block_comment = false;
+					line_comment = false;
+					
+					if( listing.search("//") != -1 ){
+						line_comment = true;
+						comment_start = listing.search("//");
+						comment_end = listing.indexOf("\n", comment_start);
+						var before_comment = listing.substring(0, comment_start);
+						var after_comment = listing.substring( comment_end + 1);
+						if(comment_end != -1){
+							listing = before_comment +  after_comment;
+						}
+					} 
+					else if( listing.indexOf("/*") != -1 ){
+						block_comment = true; 
+						comment_start = listing.indexOf("/*");
+						comment_end = listing.indexOf("*/", comment_start);
+						var before_comment = listing.substring(0, comment_start);
+						var after_comment = listing.substring( comment_end + 2);
+						
+						if(comment_end != -1){
+							listing = before_comment +  after_comment;
+						}
+					}
+				}while(line_comment || block_comment);
+				
+				
+				listing = listing.replace(/\s+[\/]{2}[.]*(\n)$/g, " ");
+				//brackets
+				listing = listing.replace(/(\()/g, " ( ");
+				listing = listing.replace(/(\))/g, " ) ");
+				listing = listing.replace(/(\{)/g, " { ");
+				listing = listing.replace(/(\})/g, " } ");
+				listing = listing.replace(/(\[)/g, " [ ");
+				listing = listing.replace(/(\])/g, " ] ");
+				listing = listing.replace(/(;)/g, " ; ");
+				listing = listing.replace(/(,)/g, " , ");
+				listing = listing.replace(/\//g, " / ");
+				listing = listing.replace(/%/g, " % ");
+				listing = listing.replace(/\*/g, " * ");
+				listing = listing.replace(/\+/g, " + ");
+				listing = listing.replace(/-/g, " - ");
+				listing = listing.replace(/[^!><]=/g, " = ");
+				listing = listing.replace(/\s*>\s*/g, " > ");
+				listing = listing.replace(/\s*<\s*/g, " < ");
+				listing = listing.replace(/\s*=\s*=\s*/g, " == ");
+				listing = listing.replace(/\s*!\s*=\s*/g, " != ");
+				listing = listing.replace(/\s*>\s*=\s*/g, " >= ");
+				listing = listing.replace(/\s*<\s*=\s*/g, " <= ");				
+				listing = listing.trim();
+				listing = listing.replace(/(\s|\t|\n)+/g, " ");
+				var words = listing.split(/[\s\n]/);
+				var result = "&nbsp&nbsp----===== LEXICAL CONVOLUTION =====---- <br>";
+                var lineNum = 1;
+				var new_listing = lineNumber(lineNum);
+				var tab = 0;
+				var newLine = false;
+				var tab_space = "&nbsp&nbsp&nbsp&nbsp&nbsp";
+				var index = 0;
+
+                var cur_tokens = [];
+                var error = false;
+
+				for(var i in words){
+					error = false;
+
+
+					++index;
+                    result += "<span>" + index + ": &lt;";
+					if(words[i].search(keywords) != -1 && keywords_array[words[i].trim()] !== undefined){
+						result += "keyword: " + keywords_array[words[i].trim()];
+					} else if (words[i].search(brackets) != -1) {
+						result += "bracket: " + brackets_array[words[i].trim()];
+					} else if(words[i].search(separators) != -1){
+						result += "separator: " + sep_arr[words[i].trim()];
+					} else if(words[i].search(id) != -1){
+						result += "id: "  + words[i].trim();
+					} else if(words[i].search(number) != -1){
+						result += "number: " + words[i].match(number)[0];
+					} else if(words[i].search(operations) != -1){
+						result += "operation: " + operations_array[words[i].trim()];
+					} else if(words[i].length != 0) {
+						result += "unknown: " + words[i];
+						error = true;
+					}
+					
+					
+					if(words[i] == ';' || words[i] == '{' || words[i] == '}')
+					{
+						if(words[i] == '{') tab++;
+						if(words[i] == '}') {
+							tab--;
+						}
+						newLine = true;
+					} else if(newLine) {
+                        new_listing += "<br>" + lineNumber(++lineNum);
+						for(var t = 0; t < tab; ++t){
+							new_listing += tab_space;
+						}
+						newLine = false;
+					}
+					
+					if(words[i] == '}'){
+						for(var t = 0; t < tab; ++t){
+							new_listing += tab_space;
+						}
+					}
+					
+					if(words[i] == ';'){
+						new_listing = new_listing.substring(0, new_listing.length - 1);
+					}
+
+                    new_listing += "<span>" + words[i] + "</span> ";
+
+                    if(words[i].trim() != ""){
+                        var token = new Token(words[i].trim());
+                        token.lineNumber = lineNum;
+                        cur_tokens.push(token);
+                    }
+
+					if (error) {
+						result += "&gt;</span> Error at line " + lineNum + ", unknown " + words[i].trim() + ". <br>";
+					} else {
+						result += "&gt;</span><br>";
+					}
+
+                    if(words[i] == ';' || words[i] == '}'){
+                        new_listing += "<br>" + lineNumber(++lineNum);
+                    }
+					
+					
+					
+                }
+
+
+
+				$("#code").html(new_listing);
+				$("#result").html(result);
+				
+				var bottom_stack = new Token("");
+				bottom_stack.setType( type.$ );
+				cur_tokens.push( bottom_stack );
+				cur_tokens.reverse();
+				
+                return cur_tokens;
+			}
+		</script>
+	</head>
+	<body>
+	<style>
+		.text{
+			width: 96%; 
+			height: 250px; 
+			border: 2px solid black; 
+			margin: 0 5px;
+		}
+	</style>
+	<center><div style="padding: 10px; display: inline; "><button type="button" onclick="process();"/>Proccess</div></center>
+	<div style="width: 37%; float: left;">
+		<p style="text-align: center;">[textarea]</p>
+		<textarea id="edit" class="text" ></textarea>
+	</div>
+	<div style="width: 37%; float: left;">
+		<p style="text-align: center;">[code]</p>
+		<p id="code" class="text"  style="overflow-y: scroll; height: 550px;" ></p>
+	</div>
+	<div style="width: 26%; float: left;">
+		<p style="text-align: center;">[output]</p>
+		<p id="result" class="text" style="overflow-y: scroll; height: 550px;"></p>
+	</div>
+
+	<style>
+		.info{
+			background-color: #1df;
+			position: fixed;
+			top: 340px;
+			padding: 5px 20px;
+		}
+		
+	</style>
+	
+	<div>
+		
+		<div class="info" id="keyword" style="width: 100px ;">	
+			<script>
+				var content = "<table style='text-align: center;'><tr><td colspan=\"2\"><u><span style=\"background-color: yellow; \">Keywords</span></u></td></tr>";		
+				for(var key in keywords_array){
+					content += "<tr><td>" + key + "</td><td>" + keywords_array[key] + "</td></tr>";
+				}
+				content += "</table>";
+				$("#keyword").html(content);
+			</script>
+		</div>
+		
+		<div class="info" id="bracket" style="left: 140px;">	
+			<script>
+				var content = "<table style='text-align: center;'><tr><td colspan=\"2\"><u><span style=\"background-color: yellow; \">Brackets</span></u></td></tr>";		
+				for(var key in brackets_array){
+					content += "<tr><td>" + key + "</td><td>" + brackets_array[key] + "</td></tr>";
+				}
+				content += "</table>";
+				$("#bracket").html(content);
+			</script>
+		</div>
+		
+		<div class="info" id="separator" style="left: 240px;">	
+			<script>
+				var content = "<table style='text-align: center;'><tr><td colspan=\"2\"><u><span style=\"background-color: yellow; \">Separators</span></u></td></tr>";		
+				for(var key in sep_arr){
+					content += "<tr><td>" + key + "</td><td>" + sep_arr[key] + "</td></tr>";
+				}
+				content += "</table>";
+				$("#separator").html(content);
+			</script>
+		</div>
+		
+		<div class="info" id="operation" style="left: 350px;">	
+			<script>
+				var content = "<table style='text-align: center;'><tr><td colspan=\"2\"><u><span style=\"background-color: yellow; \">Operations</span></u></td></tr>";		
+				for(var key in operations_array){
+					content += "<tr><td>" + key + "</td><td>" + operations_array[key] + "</td></tr>";
+				}
+				content += "</table>";
+				$("#operation").html(content);
+			</script>
+		</div>
+		
+	</div>
+		
+		
+	</div>
+	
+	<script>
+		var listing = "class Human{\n"
+		+ "\tpublic int age;\n\n"
+		+ "\tpublic Human(int humanAge){\n"
+		+ "\t\tage = humanAge;\n"
+		+ "\t}\n\n"
+		+ "\tpublic void setAge(int humanAge){\n"
+		+ "\t\tage = 15 + 4 - 6 * 4;\n"
+		+ "\t\tint size;\n"
+		+ "\t\tif(humanAge <= 113 && humanAge > 0){\n"
+		+ "\t\t\tage = humanAge + 18 / 4 - 3 * getAge(42 + humanAge / 71.1);\n"
+		+ "\t\t\tsize = 3 - 4 - 6 * 4 + (1 - 3 * (5 + 9) - 10) / 8;\n"
+		+ "\t\t}\n"
+		+ "\t}\n\n"
+		+ "\tpublic int getAge(int weight){\n"
+		+ "\t\treturn weight / 17.2;\n"
+		+ "\t}\n\n"
+		+ "}\n";
+	
+		document.getElementById("edit").value = listing;
+
+	</script>
+
+	
+	
+	</body>
+</html>
